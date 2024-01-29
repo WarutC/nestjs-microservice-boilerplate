@@ -1,0 +1,78 @@
+version: '3.9'
+networks:
+    default:
+        name: boilerplate
+
+#########################################################
+# Core service template
+#########################################################
+
+x-core-template: &core-defaults
+  build:
+    context: ./core
+    target: 'development'
+  image: ${IMAGE_REGISTRY:+${IMAGE_REGISTRY}/}core
+  env_file:
+        - .env.local
+  environment:
+      - NODE_ENV=development
+  develop:
+    watch:
+      - action: rebuild
+        path: ./core/package.json
+      - action: rebuild
+        path: ./core/config
+  volumes:
+    - ./core/src:/home/node/app/src
+  restart: always
+
+services:
+
+  #########################################################
+  # Load balancer for development environment only
+  #########################################################
+  haproxy:
+    image: haproxy:latest
+    build:
+      context: ./conf/haproxy
+    develop:
+      watch:
+        - action: rebuild
+          path: ./conf/haproxy/haproxy.cfg
+          target: /usr/local/etc/haproxy/haproxy.cfg
+    ports:
+      - "80:80"
+    restart: always
+
+
+  #########################################################
+  # Core service instances
+  #########################################################
+  # For run single node
+  # core-api:
+  #   <<: *core-defaults
+  #   command: 'pnpm run start:dev'
+
+  # For test in loadbalance environment
+  core-api-1:
+    <<: *core-defaults
+    command: 'pnpm run start:dev'
+
+  core-api-2:
+    <<: *core-defaults
+    command: 'pnpm run start:dev'
+
+  core-api-3:
+    <<: *core-defaults
+    command: 'pnpm run start:dev'
+
+  core-worker:
+    <<: *core-defaults
+    # deploy:
+    #   replicas: 3
+    command: "pnpm run consume:dev"
+
+  core-task:
+    <<: *core-defaults
+    command: "pnpm run task:dev"
+

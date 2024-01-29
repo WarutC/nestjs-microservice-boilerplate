@@ -1,0 +1,45 @@
+version: '3.9'
+networks:
+  default:
+    name: boilerplate
+volumes:
+  postgres:
+    name: boilerplate-postgres
+  redis:
+    name: boilerplate-redis
+  rabbitmq:
+    name: boilerplate-rabitmq
+
+services:
+
+  postgres:
+    image: postgres:16.1-alpine
+    env_file:
+        - .env.local
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${DB_USERNAME:-dba}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-S3cRe7}
+      - POSTGRES_DB=${DB_DATABASE:-boilerplate}
+
+  redis:
+    image: redis:alpine
+    env_file:
+        - .env.local
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+        - redis:/data
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    env_file:
+        - .env.local
+    ports:
+        - 5672:5672
+        - 15672:15672
+    volumes:
+        - rabbitmq:/var/lib/rabbitmq/
+        - ./logs/rabbitmq:/var/log/rabbitmq
